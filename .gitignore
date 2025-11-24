@@ -1,4 +1,14 @@
 # Logs
+
+node_modules/
+.env
+.chroma/
+*.csv
+!example.csv
+.DS_Store
+
+
+
 logs
 *.log
 npm-debug.log*

@@ -1,0 +1,28 @@
+{
+    "name": "data-clustering-using-vectordb",
+    "version": "1.0.0",
+    "description": "AI-powered clustering system with vector database caching",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "index": "node src/index.js",
+        "cluster": "node src/cluster.js"
+    },
+    "keywords": [
+        "clustering",
+        "ai",
+        "embeddings",
+        "vector-database"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@google/generative-ai": "^0.24.1",
+        "chromadb": "^3.1.6",
+        "csv-parser": "^3.2.0",
+        "csv-writer": "^1.6.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
