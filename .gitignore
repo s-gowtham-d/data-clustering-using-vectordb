@@ -6,7 +6,7 @@ node_modules/
 *.csv
 !example.csv
 .DS_Store
-
+package-lock.json
 
 
 logs
