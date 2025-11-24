@@ -107,29 +107,135 @@ function extractClusters(mst, n, minSize) {
         .map((cluster, idx) => ({ id: idx, indices: cluster }));
 }
 
+// export function generateClusterName(items) {
+//     const words = {};
+//     const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with']);
+
+//     items.forEach(name => {
+//         const tokens = name.toLowerCase()
+//             .replace(/[^a-z0-9\s]/g, ' ')
+//             .split(/\s+/)
+//             .filter(w => w.length > 3 && !stopWords.has(w));
+
+//         tokens.forEach(word => {
+//             words[word] = (words[word] || 0) + 1;
+//         });
+//     });
+
+//     const sorted = Object.entries(words)
+//         .filter(([_, count]) => count >= Math.ceil(items.length * 0.2))
+//         .sort((a, b) => b[1] - a[1]);
+
+//     if (sorted.length === 0) return 'Miscellaneous Group';
+//     if (sorted.length === 1) return capitalize(sorted[0][0]) + ' Items';
+
+//     return capitalize(sorted[0][0]) + ' & ' + capitalize(sorted[1][0]);
+// }
+
+
+const CATEGORY_KEYWORDS = {
+    medical: [
+        "hernia", "arthritis", "transplant", "orthopedic", "orthopaedic",
+        "implant", "orthosis", "orthotics", "organ", "surgery", "disease",
+        "health", "clinic", "hospital", "therapy", "physio"
+    ],
+    finance: [
+        "payroll", "salary", "compensation", "dividend", "benefits",
+        "finance", "financial", "account", "budget", "billing"
+    ],
+    management: [
+        "management", "admin", "administration", "supervision",
+        "planning", "operations", "organizing", "executive"
+    ],
+    construction: [
+        "building", "construction", "structure", "material", "cement",
+        "hardware", "tools", "fabrication"
+    ],
+    technology: [
+        "software", "system", "network", "tech", "cloud", "data", "ai",
+        "algorithm", "digital", "application"
+    ],
+    creative: [
+        "creative", "design", "art", "drawing", "graphics", "direction",
+        "illustration", "content", "media"
+    ],
+    education: [
+        "training", "learning", "course", "education", "teaching", "study"
+    ],
+    legal: [
+        "law", "legal", "compliance", "regulation", "contract"
+    ]
+};
+
+
 export function generateClusterName(items) {
-    const words = {};
-    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with']);
+    const score = {};
 
-    items.forEach(name => {
-        const tokens = name.toLowerCase()
-            .replace(/[^a-z0-9\s]/g, ' ')
+    for (const item of items) {
+        const words = item
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, " ")
             .split(/\s+/)
-            .filter(w => w.length > 3 && !stopWords.has(w));
+            .filter(w => w.length > 2);
 
-        tokens.forEach(word => {
-            words[word] = (words[word] || 0) + 1;
-        });
-    });
+        for (const w of words) {
+            for (const [category, keys] of Object.entries(CATEGORY_KEYWORDS)) {
+                if (keys.some(k => w.includes(k))) {
+                    score[category] = (score[category] || 0) + 1;
+                }
+            }
+        }
+    }
 
-    const sorted = Object.entries(words)
-        .filter(([_, count]) => count >= Math.ceil(items.length * 0.2))
-        .sort((a, b) => b[1] - a[1]);
+    const best = Object.entries(score)
+        .sort((a, b) => b[1] - a[1])[0];
 
-    if (sorted.length === 0) return 'Miscellaneous Group';
-    if (sorted.length === 1) return capitalize(sorted[0][0]) + ' Items';
+    if (!best) {
+        return createFallbackName(items);
+    }
 
-    return capitalize(sorted[0][0]) + ' & ' + capitalize(sorted[1][0]);
+    return formatCategoryName(best[0]);
+}
+
+
+function formatCategoryName(cat) {
+    return {
+        medical: "Medical / Healthcare",
+        finance: "Finance / Payroll",
+        management: "Management",
+        construction: "Construction / Materials",
+        technology: "Technology & Systems",
+        creative: "Creative / Design",
+        education: "Education & Training",
+        legal: "Legal & Compliance"
+    }[cat] || capitalize(cat);
+}
+
+
+function createFallbackName(items) {
+    const frequency = {};
+
+    for (const item of items) {
+        const words = item
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, " ")
+            .split(/\s+/)
+            .filter(w => w.length > 3);
+
+        for (const w of words) {
+            frequency[w] = (frequency[w] || 0) + 1;
+        }
+    }
+
+    const sorted = Object.entries(frequency)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2);
+
+    if (sorted.length === 0) return "General Category";
+
+    if (sorted.length === 1) return capitalize(sorted[0][0]);
+
+    return `${capitalize(sorted[0][0])} & ${capitalize(sorted[1][0])}`;
 }
 
 function capitalize(str) {

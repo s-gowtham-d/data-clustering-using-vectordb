@@ -46,6 +46,32 @@ clusters.slice(0, 5).forEach((c, idx) => {
     console.log(`  ${idx + 1}. ${c.name} (${c.members.length} items)`);
 });
 
+const mergedMap = new Map();
+
+for (const cluster of clusters) {
+    const key = cluster.name.trim().toLowerCase();
+
+    if (!mergedMap.has(key)) {
+        mergedMap.set(key, {
+            name: cluster.name,
+            members: [...cluster.members]
+        });
+    } else {
+        mergedMap.get(key).members.push(...cluster.members);
+    }
+}
+
+let mergedClusters = Array.from(mergedMap.values());
+
+mergedClusters.sort((a, b) => b.members.length - a.members.length);
+
+mergedClusters = mergedClusters.map((c, i) => ({
+    id: i + 1,
+    name: c.name,
+    members: c.members
+}));
+
+
 const outputFile = 'clustered_output.csv';
 await writeCondensedCSV(outputFile, clusters);
 
@@ -60,3 +86,19 @@ console.log(`   Output rows: ${outputRows}`);
 console.log(`   Reduction: ${reduction}%`);
 console.log(`   Time taken: ${formatTime(elapsed)}`);
 console.log(`   Output: ${outputFile}`);
+
+
+const mergedOutputFile = 'merged_clustered_output.csv';
+await writeCondensedCSV(mergedOutputFile, mergedClusters);
+
+const mergedElapsed = Math.floor((Date.now() - startTime) / 1000);
+const mergedInputRows = items.length;
+const mergedOutputRows = mergedClusters.length;
+const mergedReduction = ((1 - outputRows / inputRows) * 100).toFixed(2);
+
+console.log(`\n✅ Merge Clustering complete!`);
+console.log(`   Input rows: ${mergedInputRows}`);
+console.log(`   Output rows: ${mergedOutputRows}`);
+console.log(`   Reduction: ${mergedReduction}%`);
+console.log(`   Time taken: ${formatTime(mergedElapsed)}`);
+console.log(`   Output: ${mergedOutputFile}`);
