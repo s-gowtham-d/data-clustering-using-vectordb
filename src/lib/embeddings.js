@@ -35,7 +35,7 @@ export async function batchGenerateEmbeddings(texts, onProgress) {
             onProgress(Math.min(i + batchSize, texts.length), texts.length);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     return embeddings;

@@ -1,61 +1,99 @@
-# AI Data Clustering System
+# Data Clustering Using Vectordb
 
-AI-powered data clustering using Google Gemini embeddings with ChromaDB vector caching for efficient processing of 300K+ rows.
+AI-powered data clustering using Google Gemini embeddings with ChromaDB vector storage for efficient processing and reuse.
 
-## Tech Stack & Rationale
+## Tech Stack
 
 | Component | Technology | Why |
 |-----------|-----------|-----|
-| **Runtime** | Node.js 18+ | Fast async I/O, excellent for batch processing |
-| **Embeddings** | Google Gemini API | High-quality 768-dim vectors, generous free tier |
-| **Vector DB** | ChromaDB | In-process database, zero server setup, instant start |
-| **Clustering** | HDBSCAN | Automatically determines cluster count, handles noise |
-| **I/O Format** | CSV | Universal compatibility, easy to inspect and validate |
+| **Runtime** | Node.js 18+ | Fast async I/O for batch processing |
+| **Embeddings** | Google Gemini API | High-quality 768-dim vectors, free tier available |
+| **Vector DB** | ChromaDB (Docker) | Persistent storage, efficient vector operations |
+| **Clustering** | HDBSCAN | Auto-determines cluster count, handles noise |
+| **Format** | CSV | Universal compatibility |
+
+## Prerequisites
+
+- Node.js 18 or higher
+- Docker Desktop
+- Google Gemini API key (free tier)
 
 ## Installation
+
 ```bash
+# 1. Clone repository
+git clone https://github.com/s-gowtham-d/data-clustering-using-vectordb.git
+cd data-clustering-using-vectordb
+
+# 2. Install dependencies
 npm install
+
+# 3. Setup environment
 cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
 ```
 
-Edit `.env` and add your Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+## ChromaDB Setup
+
+**Start ChromaDB server:**
+```bash
+docker run -d -p 8000:8000 --name chromadb chromadb/chroma
+```
+
+**Verify it's running:**
+```bash
+curl http://localhost:8000/api/v2/heartbeat
+# Should return: {"nanosecond heartbeat": ...}
+```
+
+**Manage ChromaDB:**
+```bash
+# Stop server
+docker stop chromadb
+
+# Start server
+docker start chromadb
+
+# Remove server
+docker stop chromadb && docker rm chromadb
+```
 
 ## Usage
 
-### Step 1: Index Data (One-Time)
+### Step 1: Generate Embeddings (One-Time)
+
 ```bash
-npm run index input.csv
+npm run index example.csv
 ```
 
-**What it does:**
-- Reads CSV file (requires `id` and `name` columns)
+- Reads CSV with `id` and `name` columns
 - Generates embeddings via Gemini API
-- Stores vectors in local ChromaDB
+- Stores in ChromaDB for reuse
+- **Cost:** Free tier: ~1,500 items/day, Paid: $0.00005/item
 
-**Performance:**
-- 10K rows: ~15 minutes
-- 100K rows: ~2 hours  
-- 300K rows: ~5 hours
+### Step 2: Cluster Data (Unlimited)
 
-**Cost:** ~$20-25 for 300K rows (one-time)
-
-### Step 2: Cluster (Unlimited Runs)
 ```bash
 npm run cluster
 ```
 
-**What it does:**
 - Fetches embeddings from ChromaDB (instant)
 - Runs HDBSCAN clustering locally
-- Generates intelligent cluster names
 - Outputs condensed CSV
+- **Cost:** $0 (local computation)
 
-**Performance:** 5-10 minutes for 300K rows  
-**Cost:** $0 (runs locally)
+### Optional: Clear Database
+
+```bash
+npm run clear
+```
+
+Deletes collection to start fresh.
 
 ## Input Format
 
 CSV with two required columns:
+
 ```csv
 id,name
 1,explosive detection system
@@ -66,139 +104,212 @@ id,name
 ## Output Format
 
 Condensed CSV (one row per cluster):
+
 ```csv
 group_id,group_name,members_id,members_name
 1,Security Equipment,"1,2,3","explosive detection system, body scanner device, security checkpoint"
 ```
 
-**Compression:** 300K rows → ~87 rows (99.97% reduction)
+**Result:** Drastically reduced rows (e.g., 10K → 25 rows)
 
 ## Configuration
 
-Edit `.env` to customize:
+Edit `.env`:
+
 ```env
-GEMINI_API_KEY=your_key
+GEMINI_API_KEY=your_key_here
+CHROMA_DB_PATH=http://localhost:8000
 COLLECTION_NAME=embeddings
 EMBEDDING_MODEL=text-embedding-004
 MIN_CLUSTER_SIZE=5
 ```
 
-## Project Structure
-```
-src/
-├── index.js              # Embedding generation & storage
-├── cluster.js            # Clustering & output generation
-├── lib/
-│   ├── embeddings.js     # Gemini API wrapper
-│   ├── vectordb.js       # ChromaDB operations
-│   ├── clustering.js     # HDBSCAN implementation
-│   └── csv.js            # CSV I/O utilities
-└── utils/
-    └── helpers.js        # Distance calculation, formatting
-```
-
-## Performance Benchmarks
-
-| Dataset | Index Time | Cluster Time | Output | Reduction |
-|---------|-----------|--------------|--------|-----------|
-| 10K     | 15 min    | 30 sec       | 25     | 99.75%    |
-| 100K    | 2 hours   | 2 min        | 50     | 99.95%    |
-| 300K    | 5 hours   | 8 min        | 87     | 99.97%    |
-
 ## Limitations
 
-- **Memory:** 4-8GB RAM required for 300K rows
-- **Initial indexing:** Takes hours (but only needed once)
+### Gemini API Free Tier
+- **1,500 requests/day** - Can embed ~1,500 items daily
+- **Rate limits** - 60 requests/minute
+- **For large datasets:** Use paid tier or process in batches over multiple days
+
+### Processing Constraints
+- **Memory:** 2-4GB RAM minimum
+- **ChromaDB:** Requires Docker Desktop running
 - **Language:** Optimized for English text
-- **Internet:** Required for initial embedding generation
-- **Max tested:** 500K rows
+- **Initial run:** Slow due to API rate limits
+- **Max tested:** 50K rows (with paid API)
 
-## Cost Analysis
+### Performance Estimates
 
-**Traditional approach (re-generate embeddings each time):**
-- Per run: $20-25
-- Annual (12 runs): $300
+| Dataset Size | Indexing Time | Free Tier | Paid Tier Cost |
+|--------------|---------------|-----------|----------------|
+| 100 rows     | 2 min         | ✅ Free   | $0.005         |
+| 1,000 rows   | 15 min        | ✅ Free   | $0.05          |
+| 10,000 rows  | 3 hours       | ❌ 7 days | $0.50          |
+| 50,000 rows  | 15 hours      | ❌ 33 days| $2.50          |
 
-**This system:**
-- First run: $20-25
-- Subsequent runs: $0
-- Annual cost: $25
-- **Savings: 92%**
-
-## Troubleshooting
-
-**Error: GEMINI_API_KEY not set**
-```bash
-echo "GEMINI_API_KEY=your_key" >> .env
-```
-
-**Error: Out of memory**
-```bash
-NODE_OPTIONS="--max-old-space-size=8192" npm run index input.csv
-```
-
-**Need to re-index updated data**
-```bash
-# Delete old collection and re-run
-rm -rf .chroma
-npm run index updated_data.csv
-```
-
-**Want different cluster sizes**
-```bash
-# Edit .env
-MIN_CLUSTER_SIZE=10  # Fewer, larger clusters
-# or
-MIN_CLUSTER_SIZE=3   # More, smaller clusters
-
-# Re-cluster (free, takes minutes)
-npm run cluster
-```
+**Free tier recommendation:** Process up to 1,500 rows/day
 
 ## Example Workflow
+
 ```bash
-# Initial setup
+# Start ChromaDB
+docker run -d -p 8000:8000 --name chromadb chromadb/chroma
+
+# Setup project
 npm install
 cp .env.example .env
 # Add GEMINI_API_KEY to .env
 
-# Index your data (one time, ~5 hours for 300K rows)
-npm run index security_data.csv
+# Index your data (once)
+npm run index data.csv
 
-# Cluster (unlimited times, ~8 minutes)
+# Cluster (unlimited times, free)
 npm run cluster
 
-# Try different parameters
+# Try different cluster sizes
 # Edit MIN_CLUSTER_SIZE in .env
-npm run cluster  # Runs again in minutes, $0 cost
+npm run cluster  # Re-run instantly, $0 cost
 
 # Output: clustered_output.csv
 ```
 
-## Repository
+## Project Structure
 
-GitHub: [your-repo-link]
+```
+src/
+├── index.js              # Embedding generation & storage
+├── cluster.js            # Clustering & output
+├── clear-db.js           # Database cleanup
+├── lib/
+│   ├── embeddings.js     # Gemini API wrapper
+│   ├── vectordb.js       # ChromaDB operations
+│   ├── clustering.js     # HDBSCAN implementation
+│   └── csv.js            # CSV I/O
+└── utils/
+    └── helpers.js        # Utilities
+```
 
-## Deployment
+## Troubleshooting
 
-**Local:**
-- Clone repository
-- Run on any machine with Node.js 18+
-- No server required
+**ChromaDB connection error:**
+```bash
+# Check if ChromaDB is running
+docker ps | grep chromadb
 
-**Cloud:**
-- Works on any Node.js hosting (AWS, GCP, Azure)
-- ChromaDB data in `.chroma/` directory (include in deployment)
-- Set environment variables in cloud config
+# Restart if needed
+docker restart chromadb
+```
+
+**Gemini API quota exceeded:**
+```bash
+# Wait 24 hours for free tier reset
+# Or upgrade to paid tier
+```
+
+**Out of memory:**
+```bash
+NODE_OPTIONS="--max-old-space-size=4096" npm run index input.csv
+```
+
+**Clear and restart:**
+```bash
+npm run clear
+npm run index input.csv
+```
+
+## Cost Comparison
+
+**Without this system (re-embed every time):**
+- 1,000 items × 10 runs = $0.50
+- 10,000 items × 10 runs = $5.00
+
+**With this system:**
+- 1,000 items: $0.05 (one-time) + $0 (unlimited clustering)
+- 10,000 items: $0.50 (one-time) + $0 (unlimited clustering)
+- **Savings:** 90% after first run
+
+## Future Enhancements
+
+### Planned Features
+- [ ] **Ollama integration** - Local embeddings, zero API cost
+- [ ] **Batch processing** - Auto-split large files for free tier
+- [ ] **Progress persistence** - Resume interrupted indexing
+- [ ] **Web UI** - Visual cluster exploration
+- [ ] **Multiple algorithms** - K-Means, DBSCAN options
+- [ ] **Export formats** - JSON, Parquet, SQL exports
+- [ ] **Incremental updates** - Only process new items
+
+### Under Consideration
+- [ ] **Hierarchical clustering** - Multi-level grouping
+- [ ] **Quality metrics** - Silhouette scores, validation
+- [ ] **Auto-optimization** - Best parameter detection
+- [ ] **Cloud deployment** - One-click deploy to Heroku/Railway
+- [ ] **API server** - REST API for programmatic access
+- [ ] **Multi-language** - Support non-English text
+- [ ] **Streaming mode** - Process CSV without loading into memory
+
+### Advanced Ideas
+- [ ] **Hybrid embeddings** - Mix Gemini + local models
+- [ ] **Active learning** - User feedback improves clustering
+- [ ] **Real-time updates** - Process new items on-the-fly
+- [ ] **Comparison tool** - Compare different clustering runs
+- [ ] **Deduplication** - Detect and merge similar items
+- [ ] **Custom models** - Fine-tune embeddings for domain
+
+## Docker Compose (Alternative Setup)
+
+Create `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+volumes:
+  chroma-data:
+```
+
+Run:
+```bash
+docker-compose up -d
+```
 
 ## License
 
 MIT
 
+## Support
+
+- Open issues on GitHub
+- Check Docker logs: `docker logs chromadb`
+- Verify ChromaDB: `curl http://localhost:8000/api/v2/heartbeat`
+
 ## Changelog
 
-**v1.0.0** - Initial release
-- Gemini embeddings with ChromaDB caching
+**v1.0.0** - Initial Release
+- Google Gemini embeddings
+- ChromaDB vector storage
 - HDBSCAN clustering
 - Condensed CSV output
-- Tested up to 500K rows
+- Docker-based setup
+
+---
+
+## Quick Reference
+
+```bash
+# Daily workflow
+docker start chromadb           # Start DB
+npm run index new_data.csv     # Index once (free tier: <1500 rows)
+npm run cluster                # Cluster (free, unlimited)
+
+# Cleanup
+npm run clear                  # Clear database
+docker stop chromadb           # Stop server
+```
+
+**Free tier sweet spot:** Process 200-400 rows/day for optimal results.
