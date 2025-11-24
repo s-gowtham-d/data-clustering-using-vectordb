@@ -6,7 +6,10 @@
     "type": "module",
     "scripts": {
         "index": "node src/index.js",
-        "cluster": "node src/cluster.js"
+        "cluster": "node src/cluster.js",
+        "clear": "node src/clear-db.js",
+        "docker:start": "docker run -d -p 8000:8000 --name chromadb chromadb/chroma",
+        "docker:stop": "docker stop chromadb && docker rm chromadb"
     },
     "keywords": [
         "clustering",
@@ -20,7 +23,8 @@
         "@google/generative-ai": "^0.24.1",
         "chromadb": "^3.1.6",
         "csv-parser": "^3.2.0",
-        "csv-writer": "^1.6.0"
+        "csv-writer": "^1.6.0",
+        "dotenv": "^17.2.3"
     },
     "engines": {
         "node": ">=18.0.0"
